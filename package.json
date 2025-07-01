@@ -1,0 +1,31 @@
+{
+  "name": "question-management-system",
+  "version": "1.0.0",
+  "description": "A comprehensive question management system with Vue 3.0 frontend and Express backend",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+  },
+  "devDependencies": {
+    "@types/multer": "^1.4.13",
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "vue",
+    "typescript",
+    "express",
+    "mysql",
+    "question-management"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "multer": "^2.0.1",
+    "xlsx": "^0.18.5"
+  }
+}
