@@ -46,7 +46,7 @@
           <el-form-item label="选项" prop="options">
             <div class="options-container">
               <div
-                v-for="(option, index) in form.options"
+                v-for="(_option, index) in form.options"
                 :key="index"
                 class="option-item"
               >
@@ -176,7 +176,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onBeforeMount, onMounted } from 'vue'
+import { ref, onBeforeMount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import * as questionsApi from '@/api/questions'
@@ -294,8 +294,8 @@ const handleSubmit = async () => {
 onBeforeMount(async () => {
   const id = router.currentRoute.value.query.id
   if (id) {
-    const res = await getQuestionById(id)
-    form.value = res.question
+    const res = await getQuestionById(id as unknown as number)
+    form.value = (<any>res).question
     isEdit.value = true
   }
 })

@@ -15,15 +15,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useUserStore } from '@/stores/user';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 
 const userStore = useUserStore();
 const router = useRouter();
-const isStudent = computed(() => userStore.user?.role === 'student');
-const isTeacher = computed(() => userStore.user?.role === 'teacher');
 
 function logout() {
   userStore.logout();

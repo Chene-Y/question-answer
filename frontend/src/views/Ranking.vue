@@ -185,8 +185,8 @@ const loadRanking = async () => {
   loading.value = true;
   try {
     const res = await getRanking({ category: selectedCategory.value });
-    if (res && res.ranking) {
-      ranking.value = res.ranking;
+    if (res && (<any>res).ranking) {
+      ranking.value = (<any>res).ranking;
     } else {
       ElMessage.error('获取排名失败');
     }

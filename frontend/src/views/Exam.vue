@@ -3,7 +3,7 @@
     <div class="exam-header">
       <h2>答题</h2>
       <div v-if="questions.length" class="progress-bar">
-        <el-progress :percentage="progressPercent" :show-text="false" stroke-width="10" color="#409eff" />
+        <el-progress :percentage="progressPercent" :show-text="false" :stroke-width="10" color="#409eff" />
         <span class="progress-text">第{{ currentIndex + 1 }}/{{ questions.length }}题</span>
       </div>
     </div>
@@ -100,9 +100,9 @@ const currentIndex = ref(0);
 onMounted(async () => {
   loading.value = true;
   const { category, count } = route.query;
-  const res = await getRandomQuestions({ category, count });
-  if (res && res.questions) {
-    questions.value = res.questions.map((q: any) => ({
+  const res = await getRandomQuestions({ category: category as string, count: count as unknown as number });
+  if (res && (<any>res).questions) {
+    questions.value = (<any>res).questions.map((q: any) => ({
       ...q,
       options: q.options ? (typeof q.options === 'string' ? JSON.parse(q.options) : q.options) : []
     }));
@@ -160,12 +160,12 @@ async function submit() {
   
   try {
     const res = await submitBatchAnswers({ answers: answerArr });
-    if (res && res.results) {
-      res.results.forEach((r: any) => {
+    if (res && (<any>res).results) {
+      (<any>res).results.forEach((r: any) => {
         results[r.question_id] = r;
       });
-      totalScore.value = res.totalScore;
-      totalPoints.value = res.totalPoints;
+      totalScore.value = (<any>res).totalScore;
+      totalPoints.value = (<any>res).totalPoints;
       submitted.value = true;
       ElMessage.success('答题完成！');
     } else {
@@ -178,7 +178,7 @@ async function submit() {
 
 async function showAnalysis(qid: number) {
   const res = await getQuestionAnalysis(qid);
-  analysisDialog.content = res?.analysis || '暂无解析';
+  analysisDialog.content = (<any>res)?.analysis || '暂无解析';
   analysisDialog.visible = true;
 }
 

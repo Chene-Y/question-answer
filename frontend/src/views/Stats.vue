@@ -275,8 +275,7 @@ import * as echarts from 'echarts';
 
 const router = useRouter();
 const userStore = useUserStore();
-const isTeacher = userStore.isTeacher;
-const isStudent = userStore.isStudent;
+const isTeacher: boolean = userStore.isTeacher;
 
 const loading = ref(true);
 const stats = ref<any>({});
@@ -327,8 +326,8 @@ async function loadStudentStats() {
     stats.value = res.stats;
     // 获取类别答题统计
     const catRes = await getCategoryAnswerStats();
-    if (catRes && catRes.stats) {
-      categoryAnswerStats.value = catRes.stats;
+    if (catRes && (<any>catRes).stats) {
+      categoryAnswerStats.value = (<any>catRes).stats;
     }
     await nextTick();
     setTimeout(() => {
@@ -530,7 +529,7 @@ function getRandomColor() {
   const s = Math.floor(Math.random() * 40) + 60;
   const l = Math.floor(Math.random() * 20) + 60;
   // HSL转RGB
-  function hslToHex(h, s, l) {
+  function hslToHex(h: number, s: number, l: number) {
     s /= 100;
     l /= 100;
     let c = (1 - Math.abs(2 * l - 1)) * s;

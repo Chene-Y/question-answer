@@ -70,12 +70,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useUserStore } from '@/stores/user'
 import * as questionsApi from '@/api/questions'
 import type { Question } from '@/types'
 
 const router = useRouter()
-const userStore = useUserStore()
 
 const loading = ref(false)
 const questions = ref<Question[]>([])
@@ -88,12 +86,6 @@ const filterCategory = ref('')
 const filterDifficulty = ref('')
 const filterType = ref('')
 
-const filters = {
-  search: '',
-  category: '',
-  difficulty: '',
-  type: ''
-}
 
 const getCategories = async () => {
   const response = await questionsApi.getQuestions({
@@ -101,8 +93,8 @@ const getCategories = async () => {
     pageSize: 10000,
   })
   // Extract unique categories
-  const uniqueCategories = [...new Set(response.questions.map(q => q.category).filter(Boolean))]
-  categories.value = uniqueCategories
+  const uniqueCategories = [...new Set((<any>response).questions.map((q: any) => q.category).filter(Boolean))]
+  categories.value = uniqueCategories as string[]
 }
 
 const loadQuestions = async () => {
@@ -114,10 +106,10 @@ const loadQuestions = async () => {
       search: search.value,
       category: filterCategory.value,
       difficulty: filterDifficulty.value,
-      question_type: filterType.value
+      type: filterType.value
     })
-    questions.value = response.questions || []
-    total.value = response.total
+    questions.value = (<any>response).questions || []
+    total.value = (<any>response).total
 
   } catch (error) {
     console.error('Failed to load questions:', error)
@@ -125,10 +117,6 @@ const loadQuestions = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const handleSearch = () => {
-  loadQuestions()
 }
 
 const getDifficultyType = (difficulty: string) => {
@@ -149,27 +137,11 @@ const getDifficultyText = (difficulty: string) => {
   }
 }
 
-const getTypeText = (type: string) => {
-  switch (type) {
-    case 'multiple_choice': return '选择题'
-    case 'true_false': return '判断题'
-    case 'short_answer': return '简答题'
-    case 'essay': return '论述题'
-    default: return '未知'
-  }
-}
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString('zh-CN')
 }
 
-const viewQuestion = (question: Question) => {
-  router.push(`/questions/${question.id}`)
-}
-
-const editQuestion = (question: Question) => {
-  router.push(`/questions/create?id=${question.id}`)
-}
 
 const deleteQuestion = async (question: Question) => {
   try {
@@ -188,10 +160,6 @@ const deleteQuestion = async (question: Question) => {
     loadQuestions()
   } catch (error) {
   }
-}
-
-const answerQuestion = (question: Question) => {
-  router.push(`/questions/${question.id}`)
 }
 
 const goCreate = () => {

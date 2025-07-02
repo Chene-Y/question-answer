@@ -126,13 +126,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 import * as questionsApi from '@/api/questions'
 import * as answersApi from '@/api/answers'
 import { useRouter } from 'vue-router'
 import { Edit, PieChart, Medal, Document, UploadFilled, Warning } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -145,18 +144,17 @@ const stats = ref({
 
 const isStudent = computed(() => userStore.user?.role === 'student')
 
-const getRoleText = () => {
-  return userStore.isTeacher 
-    ? '您是教师，可以创建和管理题目，查看学生答题情况。'
-    : '您是学生，可以答题查看学习进度。'
-}
-
 const loadStats = async () => {
   try {
     if (userStore.isTeacher) {
       const questionsResponse = await questionsApi.getQuestions({page: 1, pageSize: 10000})
-      stats.value.totalQuestions = questionsResponse.total || 0
-      stats.value.totalScore = questionsResponse.questions.filter((question: any) => question.created_by_user_id === userStore.user.id).length
+      stats.value.totalQuestions = (<any>questionsResponse).total || 0
+      stats.value.totalScore = (<any>questionsResponse).questions.filter((question: any) =>{ 
+        if (userStore.user) {
+          return question.created_by_user_id === userStore.user.id
+        }
+        return false
+      }).length
     } else {
       const statsResponse = await answersApi.getStudentStats()
       if (statsResponse.stats) {

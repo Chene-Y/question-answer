@@ -49,6 +49,7 @@ export interface CreateQuestionRequest {
   points?: number
   difficulty?: 'easy' | 'medium' | 'hard'
   category?: string
+  analysis?: string
 }
 
 export interface SubmitAnswerRequest {

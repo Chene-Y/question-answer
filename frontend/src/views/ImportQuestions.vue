@@ -75,7 +75,6 @@ function beforeUpload(file: File) {
   }
   return true;
 }
-function goBack() { router.back() }
 </script>
 
 <style scoped>

@@ -245,7 +245,7 @@ const passwordForm = reactive({
   confirmPassword: ''
 })
 
-const validateConfirmPassword = (rule: any, value: string, callback: any) => {
+const validateConfirmPassword = (_rule: any, value: string, callback: any) => {
   if (value === '') {
     callback(new Error('请再次输入新密码'))
   } else if (value !== passwordForm.newPassword) {

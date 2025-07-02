@@ -118,12 +118,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
 import * as answersApi from '@/api/answers'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 
-const router = useRouter()
 
 // 统计相关
 const statsLoading = ref(false)
@@ -149,7 +147,7 @@ const loadStats = async () => {
     const response = await answersApi.getWrongAnswerStats()
     
     // API 响应拦截器已经返回了 response.data，所以直接使用 response.stats
-    statsData.value = response.stats || []
+    statsData.value = (<any>response).stats || []
     
     await nextTick()
     renderStatsChart()
@@ -322,8 +320,8 @@ const loadWrongAnswers = async () => {
     })
     
     // API 响应拦截器已经返回了 response.data
-    wrongAnswers.value = response.wrongAnswers || []
-    wrongAnswersTotal.value = response.total || 0
+    wrongAnswers.value = (<any>response).wrongAnswers || []
+    wrongAnswersTotal.value = (<any>response).total || 0
   } catch (error) {
     console.error('Failed to load wrong answers:', error)
     wrongAnswers.value = []
