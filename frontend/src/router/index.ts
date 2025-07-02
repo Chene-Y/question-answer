@@ -61,6 +61,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/wrong-answers',
+      name: 'WrongAnswers',
+      component: () => import('@/views/WrongAnswers.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/profile',
       name: 'Profile',
       component: () => import('@/views/Profile.vue'),

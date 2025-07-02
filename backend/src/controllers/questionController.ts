@@ -225,7 +225,7 @@ export const deleteQuestion = async (req: Request, res: Response): Promise<void>
     }
 
     if (question.created_by !== userId) {
-      res.status(403).json({ message: 'Not authorized to delete this question' });
+      res.status(403).json({ message: '不能删除其他老师的题目' });
       return;
     }
 
@@ -274,28 +274,31 @@ export const importExcelQuestions = async (req: Request, res: Response): Promise
     }
     const filePath = req.file.path;
     const workbook = xlsx.readFile(filePath);
+    
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const data = xlsx.utils.sheet_to_json(sheet);
     const userId = (req as any).user.id;
     let success = 0, fail = 0, errors: any[] = [];
     for (const row of data) {
+      
       try {
-        const {
-          title, content, question_type, options, correct_answer, points, difficulty, category, analysis
-        } = row as any;
+        const keys = Object.values(row as any);
+        const option = String(keys[3] || '').split('，').map((item: string) => item.trim());
+        
+      
         await pool.execute(
           `INSERT INTO questions (title, content, question_type, options, correct_answer, points, difficulty, category, analysis, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            title,
-            content,
-            question_type,
-            options ? JSON.stringify(typeof options === 'string' ? JSON.parse(options) : options) : null,
-            correct_answer,
-            points || 1,
-            difficulty || 'medium',
-            category,
-            analysis,
+            keys[0],
+            keys[1],
+            keys[2],
+            option,
+            keys[4],
+            keys[5],
+            keys[6],
+            keys[7],
+            keys[8],
             userId
           ]
         );

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/database';
 import { LoginRequest, RegisterRequest, User } from '../types';
+import { log } from 'console';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -55,14 +56,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     // Find user
     const [users] = await pool.execute<any[]>(
-      'SELECT id, username, email, password_hash, role FROM users WHERE username = ?',
+      'SELECT id, username, email, password_hash, role, created_at FROM users WHERE username = ?',
       [username]
     );
 
     const user = (users as any[])[0];
 
     if (!user) {
-      res.status(401).json({ message: 'Invalid credentials' });
+      res.status(403).json({ message: '暂未查询到该用户' });
       return;
     }
 
@@ -70,7 +71,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
-      res.status(401).json({ message: 'Invalid credentials' });
+      res.status(403).json({ message: '密码错误' });
       return;
     }
 
@@ -88,7 +89,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role
+        role: user.role,
+        created_at: user.created_at
       }
     });
   } catch (error) {

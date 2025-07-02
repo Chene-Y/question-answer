@@ -24,15 +24,13 @@ export const useUserStore = defineStore('user', () => {
 
   const login = async (username: string, password: string) => {
     const response = await authApi.login({ username, password })
-
     const { token: newToken, user: userData } = response
-    
     token.value = newToken
     user.value = userData
+    console.log(userData)
     
     localStorage.setItem('token', newToken)
     localStorage.setItem('user', JSON.stringify(userData))
-    
     return response
   }
 

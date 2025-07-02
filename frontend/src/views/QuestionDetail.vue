@@ -254,8 +254,6 @@ const loadQuestion = async () => {
       }
     }
   } catch (error) {
-    console.error('Failed to load question:', error)
-    ElMessage.error('加载题目失败')
   } finally {
     loading.value = false
   }
@@ -278,9 +276,7 @@ const submitAnswer = async () => {
 
     ElMessage.success('答案提交成功')
   } catch (error: any) {
-    if (error.message) {
-      ElMessage.error(error.message)
-    }
+    
   } finally {
     submitting.value = false
   }
@@ -295,17 +291,38 @@ onMounted(() => {
 .question-detail {
   max-width: 800px;
   margin: 0 auto;
+  padding: 32px 0;
+}
+
+.el-card {
+  background: rgba(255,255,255,0.88) !important;
+  border-radius: 22px;
+  box-shadow: 0 8px 32px rgba(64, 158, 255, 0.13);
+  border: none;
+  backdrop-filter: blur(12px);
+  padding: 32px 24px 18px 24px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 8px;
 }
 
 .page-header h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #409eff;
+  letter-spacing: 2px;
+}
+
+.header-right .el-tag {
+  margin-left: 8px;
+  font-size: 15px;
+  border-radius: 8px;
+  padding: 2px 12px;
 }
 
 .question-content {
@@ -316,27 +333,29 @@ onMounted(() => {
   display: flex;
   gap: 20px;
   margin-bottom: 24px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  padding: 16px 18px;
+  background: linear-gradient(90deg, #e8f6ff 0%, #f3ffe6 100%);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px #409eff11;
 }
 
 .info-item {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 15px;
 }
 
 .label {
-  font-weight: 500;
-  color: #666;
+  font-weight: 600;
+  color: #409eff;
 }
 
 .content-section,
 .options-section,
 .answer-section,
 .result-section {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .content-section h3,
@@ -344,28 +363,36 @@ onMounted(() => {
 .answer-section h3,
 .result-section h3 {
   margin: 0 0 12px 0;
-  font-size: 16px;
-  color: #333;
+  font-size: 17px;
+  color: #409eff;
+  font-weight: 600;
 }
 
 .content-text {
-  line-height: 1.6;
-  color: #333;
+  line-height: 1.7;
+  color: #222;
+  font-size: 16px;
+  background: #f8fafd;
+  border-radius: 10px;
+  padding: 14px 18px;
+  box-shadow: 0 1px 4px #409eff0a;
 }
 
 .options-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .option-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 8px;
-  background: #f8f9fa;
-  border-radius: 4px;
+  gap: 10px;
+  padding: 10px 16px;
+  background: linear-gradient(90deg, #f8fafd 60%, #e8f6ff 100%);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px #409eff0a;
+  font-size: 15px;
 }
 
 .option-label {
@@ -381,19 +408,28 @@ onMounted(() => {
 .answer-option {
   display: block;
   margin-bottom: 12px;
+  border-radius: 8px;
+  padding: 6px 12px;
+  background: #f8fafd;
+  transition: background 0.2s;
+}
+.answer-option:hover {
+  background: #e8f6ff;
 }
 
 .result-content {
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  padding: 18px 20px;
+  background: linear-gradient(90deg, #f8fafd 60%, #e8f6ff 100%);
+  border-radius: 12px;
+  box-shadow: 0 1px 4px #409eff0a;
 }
 
 .result-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  font-size: 15px;
 }
 
 .result-item:last-child {
@@ -402,6 +438,27 @@ onMounted(() => {
 
 .correct-answer {
   color: #67c23a;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.el-button[type="primary"] {
+  border-radius: 14px;
+  background: linear-gradient(135deg, #409eff, #67c23a);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 16px #409eff22;
+  border: none;
+  transition: all 0.2s;
+}
+.el-button[type="primary"]:hover {
+  background: linear-gradient(135deg, #67c23a, #409eff);
+  color: #fff;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 24px #67c23a33;
+}
+.el-button {
+  border-radius: 12px;
 }
 </style> 

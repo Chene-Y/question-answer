@@ -152,6 +152,18 @@
           />
         </el-form-item>
 
+        <el-form-item label="解析" prop="analysis">
+          <el-input
+            v-model="form.analysis"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入本题解析（必填，可用于答题后展示）"
+            maxlength="500"
+            show-word-limit
+            style="width: 100%"
+          />
+        </el-form-item>
+
         <el-form-item>
           <el-button type="primary" :loading="loading" @click="handleSubmit">
             {{ isEdit ? '修改题目' : '创建题目' }}
@@ -176,7 +188,7 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 const isEdit = ref(false)
 
-let form = ref<CreateQuestionRequest & { options: string[] }>({
+let form = ref<CreateQuestionRequest & { options: string[], analysis?: string }>({
   title: '',
   content: '',
   question_type: 'multiple_choice',
@@ -184,7 +196,8 @@ let form = ref<CreateQuestionRequest & { options: string[] }>({
   correct_answer: '',
   points: 1,
   difficulty: 'medium',
-  category: ''
+  category: '',
+  analysis: ''
 })
 
 const rules: FormRules = {
@@ -206,6 +219,12 @@ const rules: FormRules = {
   ],
   difficulty: [
     { required: true, message: '请选择难度', trigger: 'change' }
+  ],
+  category: [
+    { required: true, message: '请输入题目分类', trigger: 'blur' }
+  ],
+  analysis: [
+    { required: true, message: '请输入本题解析', trigger: 'blur' }
   ]
 }
 
@@ -251,7 +270,8 @@ const handleSubmit = async () => {
       correct_answer: form.value.correct_answer,
       points: form.value.points,
       difficulty: form.value.difficulty,
-      category: form.value.category
+      category: form.value.category,
+      analysis: form.value.analysis
     }
     
     // Add options for multiple choice and true/false
@@ -289,22 +309,69 @@ onMounted(() => {
 .create-question {
   max-width: 800px;
   margin: 0 auto;
+  padding: 32px 0;
 }
 
+.el-card {
+  background: rgba(255,255,255,0.85) !important;
+  border-radius: 22px;
+  box-shadow: 0 8px 32px rgba(64, 158, 255, 0.13);
+  border: none;
+  backdrop-filter: blur(12px);
+  padding: 32px 24px 18px 24px;
+}
 .page-header h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #409eff;
+  letter-spacing: 2px;
+  text-align: center;
 }
-
+.el-form {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.el-form-item {
+  margin-bottom: 0 !important;
+}
+.el-input, .el-textarea {
+  border-radius: 12px !important;
+  font-size: 16px;
+}
+.el-input__inner, .el-textarea__inner {
+  border-radius: 12px !important;
+  font-size: 16px;
+}
 .options-container {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-
 .option-item {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.el-button[type="primary"] {
+  border-radius: 14px;
+  background: linear-gradient(135deg, #409eff, #67c23a);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 16px #409eff22;
+  border: none;
+  transition: all 0.2s;
+}
+.el-button[type="primary"]:hover {
+  background: linear-gradient(135deg, #67c23a, #409eff);
+  color: #fff;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 24px #67c23a33;
+}
+.el-button {
+  border-radius: 12px;
 }
 </style> 

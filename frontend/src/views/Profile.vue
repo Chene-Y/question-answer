@@ -1,6 +1,6 @@
 <template>
   <div class="profile-page">
-    <el-card>
+    <el-card class="profile-main-card glass-card">
       <template #header>
         <div class="page-header">
           <h2>个人资料</h2>
@@ -11,7 +11,7 @@
         <el-row :gutter="40">
           <!-- Profile Info -->
           <el-col :span="12">
-            <el-card>
+            <el-card class="glass-card profile-sub-card">
               <template #header>
                 <span>基本信息</span>
               </template>
@@ -41,7 +41,7 @@
 
           <!-- Quick Stats -->
           <el-col :span="12">
-            <el-card>
+            <el-card class="glass-card profile-sub-card">
               <template #header>
                 <span>快速统计</span>
               </template>
@@ -72,7 +72,7 @@
                     <el-icon><CircleCheck /></el-icon>
                   </div>
                   <div class="stat-info">
-                    <div class="stat-number">{{ studentStats.accuracy }}%</div>
+                    <div class="stat-number">{{ studentStats.accuracy.toFixed(2) }}%</div>
                     <div class="stat-label">正确率</div>
                   </div>
                 </div>
@@ -94,7 +94,7 @@
         <!-- Recent Activity -->
         <el-row style="margin-top: 30px;">
           <el-col :span="24">
-            <el-card>
+            <el-card class="glass-card profile-sub-card">
               <template #header>
                 <span>最近活动</span>
               </template>
@@ -104,19 +104,26 @@
                   <el-icon><Clock /></el-icon>
                   <p>暂无最近活动</p>
                 </div>
-                <div
-                  v-for="activity in recentActivity"
-                  :key="activity.id"
-                  class="activity-item"
-                >
-                  <div class="activity-icon">
-                    <el-icon><CircleCheck /></el-icon>
+                <template v-if="userStore.isTeacher">
+                  <div v-for="item in recentActivity" :key="item.id" class="activity-item-row">
+                    <span class="activity-time-highlight">{{ formatDate(item.time) }}</span>
+                    <span class="activity-title ellipsis">{{ item.title }}</span>
+                    <el-tag size="small" type="primary" class="activity-tag">{{ item.category || '未分类' }}</el-tag>
+                    <span style="flex: 1;flex-shrink: 0;" class="activity-desc ellipsis">{{ item.content }}</span>
                   </div>
-                  <div class="activity-content">
-                    <div class="activity-title">{{ activity.title }}</div>
-                    <div class="activity-time">{{ formatDate(activity.time) }}</div>
+                </template>
+                <template v-else>
+                  <div v-for="item in recentActivity" :key="item.id" class="activity-item-row">
+                    <span class="activity-time-highlight">{{ formatDate(item.time) }}</span>
+                    <span class="activity-title ellipsis">{{ item.title }}</span>
+                    <el-tag size="small" :type="item.is_correct ? 'success' : 'danger'" class="activity-tag">{{ item.is_correct ? '正确' : '错误' }}</el-tag>
+                    <span class="activity-desc ellipsis">{{ item.content }}</span>
+                    <span class="activity-stats">得分：{{ item.score }} / {{ item.points }}</span>
                   </div>
-                </div>
+                  <div class="activity-summary" v-if="recentActivity.length">
+                    <span>最近7次答题，答题数：{{ recentActivity.length }}，正确率：{{ (recentActivity.filter(a => a.is_correct).length / recentActivity.length * 100).toFixed(1) }}%</span>
+                  </div>
+                </template>
               </div>
             </el-card>
           </el-col>
@@ -125,7 +132,7 @@
         <!-- Account Actions -->
         <el-row style="margin-top: 30px;">
           <el-col :span="24">
-            <el-card>
+            <el-card class="glass-card profile-sub-card">
               <template #header>
                 <span>账户操作</span>
               </template>
@@ -155,6 +162,7 @@
       v-model="showChangePassword"
       title="修改密码"
       width="400px"
+      class="profile-dialog"
     >
       <el-form
         ref="passwordFormRef"
@@ -204,7 +212,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import * as answersApi from '@/api/answers'
-import type { User, StudentStats } from '@/types'
+import * as questionsApi from '@/api/questions'
+import type { User, StudentStats, Question, StudentAnswer } from '@/types'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -319,8 +328,37 @@ const handleLogout = () => {
   router.push('/login')
 }
 
+const loadRecentActivity = async () => {
+  if (userStore.isTeacher) {
+    // 教师端：最近7条新增题目
+    const res = await questionsApi.getQuestions({ page: 1, pageSize: 7 })
+    recentActivity.value = (res.questions || []).map((q: Question) => ({
+      id: q.id,
+      time: q.created_at,
+      content: q.content,
+      category: q.category,
+      title: q.title
+    }))
+  } else if (userStore.isStudent) {
+    // 学生端：最近7次答题记录
+    const res = await answersApi.getStudentAnswers()
+    const answers: StudentAnswer[] = res.answers || []
+    recentActivity.value = answers.slice(0, 7).map((a: StudentAnswer) => ({
+      id: a.id,
+      time: a.submitted_at,
+      content: a.content,
+      title: a.title,
+      answer: a.answer,
+      is_correct: a.is_correct,
+      score: a.score,
+      points: a.points
+    }))
+  }
+}
+
 onMounted(() => {
   loadProfile()
+  loadRecentActivity()
 })
 </script>
 
@@ -328,144 +366,187 @@ onMounted(() => {
 .profile-page {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 32px 0;
 }
-
+.profile-main-card.glass-card {
+  background: rgba(255,255,255,0.88) !important;
+  border-radius: 22px;
+  box-shadow: 0 8px 32px rgba(64, 158, 255, 0.13);
+  border: none;
+  backdrop-filter: blur(12px);
+  padding: 38px 32px 32px 32px;
+}
+.profile-sub-card.glass-card {
+  background: rgba(255,255,255,0.96) !important;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px #409eff11;
+  border: none;
+  margin-bottom: 18px;
+}
 .page-header h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #409eff;
+  letter-spacing: 2px;
+  text-align: center;
 }
-
 .profile-info {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+  padding: 10px 0 0 0;
 }
-
 .info-item {
   display: flex;
   align-items: center;
   gap: 12px;
+  font-size: 15px;
 }
-
 .label {
-  font-weight: 500;
-  color: #666;
+  font-weight: 600;
+  color: #409eff;
   min-width: 80px;
 }
-
 .value {
   color: #333;
 }
-
 .quick-stats {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+  padding: 10px 0 0 0;
 }
-
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
-
 .stat-icon {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: #409eff;
+  background: linear-gradient(135deg, #409eff, #67c23a);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px #409eff22;
 }
-
 .stat-icon .el-icon {
-  font-size: 18px;
+  font-size: 22px;
   color: white;
 }
-
-.stat-icon.success {
-  background: #67c23a;
-}
-
-.stat-icon.primary {
-  background: #409eff;
-}
-
 .stat-info {
   flex: 1;
 }
-
 .stat-number {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: bold;
   color: #333;
   margin-bottom: 2px;
 }
-
 .stat-label {
   color: #666;
-  font-size: 12px;
+  font-size: 13px;
 }
-
+.account-actions {
+  display: flex;
+  gap: 18px;
+  margin-top: 10px;
+}
+.el-button[type="primary"], .el-button[type="warning"], .el-button[type="danger"] {
+  border-radius: 14px;
+  background: linear-gradient(135deg, #409eff, #67c23a);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 16px #409eff22;
+  border: none;
+  transition: all 0.2s;
+}
+.el-button[type="primary"]:hover, .el-button[type="warning"]:hover, .el-button[type="danger"]:hover {
+  background: linear-gradient(135deg, #67c23a, #409eff);
+  color: #fff;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 24px #67c23a33;
+}
+.el-button {
+  border-radius: 12px;
+}
+.profile-dialog .el-dialog__body {
+  padding-top: 18px;
+}
 .activity-list {
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  position: relative;
 }
-
+.activity-item-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(90deg, #f8fafd 60%, #e8f6ff 100%);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px #409eff0a;
+  padding: 10px 16px;
+  font-size: 15px;
+  min-width: 0;
+}
+.activity-time-highlight {
+  font-size: 14px;
+  color: #fff;
+  background: linear-gradient(90deg, #409eff 60%, #67c23a 100%);
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-weight: 600;
+  min-width: 110px;
+  text-align: center;
+  box-shadow: 0 1px 4px #409eff22;
+  flex-shrink: 0;
+}
+.activity-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #409eff;
+  max-width: 160px;
+  flex-shrink: 1;
+}
+.activity-tag {
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+.activity-desc {
+  color: #333;
+  font-size: 14px;
+  flex-shrink: 1;
+}
+.activity-stats {
+  font-size: 13px;
+  color: #67c23a;
+  flex-shrink: 0;
+}
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
+}
+.activity-summary {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #409eff;
+  text-align: right;
+}
 .no-activity {
   text-align: center;
   color: #999;
   padding: 40px;
 }
-
 .no-activity .el-icon {
   font-size: 48px;
   margin-bottom: 12px;
-}
-
-.activity-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.activity-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #67c23a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.activity-icon .el-icon {
-  font-size: 16px;
-  color: white;
-}
-
-.activity-content {
-  flex: 1;
-}
-
-.activity-title {
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 4px;
-}
-
-.activity-time {
-  font-size: 12px;
-  color: #666;
-}
-
-.account-actions {
-  display: flex;
-  gap: 12px;
 }
 </style> 

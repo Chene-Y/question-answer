@@ -6,7 +6,10 @@ import {
   getQuestionStats,
   submitBatchAnswers,
   getRanking,
-  getQuestionAnalysis
+  getQuestionAnalysis,
+  getWrongAnswerStats,
+  getWrongAnswers,
+  getCategoryAnswerStats
 } from '../controllers/answerController';
 import { authenticateToken, requireTeacher } from '../middleware/auth';
 import { submitAnswerValidation } from '../utils/validation';
@@ -26,5 +29,14 @@ router.get('/analysis/:questionId', getQuestionAnalysis);
 
 // Teacher routes
 router.get('/question-stats/:questionId', requireTeacher, getQuestionStats);
+
+// 获取错题统计（按时间分组）
+router.get('/wrong-stats', getWrongAnswerStats);
+
+// 获取错题列表
+router.get('/wrong-answers', getWrongAnswers);
+
+// 获取分类统计
+router.get('/category-stats', getCategoryAnswerStats);
 
 export default router; 

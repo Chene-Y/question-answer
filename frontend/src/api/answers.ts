@@ -42,3 +42,17 @@ export async function getRanking(params?: { category?: string }) {
 export async function getMyStats() {
   return api.get('/answers/my-stats');
 }
+
+// 获取错题统计（按时间分组）
+export async function getWrongAnswerStats() {
+  return api.get('/answers/wrong-stats');
+}
+
+// 获取错题列表
+export async function getWrongAnswers(params?: { page?: number, pageSize?: number }) {
+  return api.get('/answers/wrong-answers', { params });
+}
+
+export async function getCategoryAnswerStats() {
+  return api.get('/answers/category-stats');
+}

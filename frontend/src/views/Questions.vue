@@ -1,15 +1,34 @@
 <template>
   <div class="questions-page">
     <el-card class="questions-card">
-      <div class="questions-header">
-        <el-input v-model="search" placeholder="搜索题目标题/内容" class="search-input" @keyup.enter="loadQuestions" clearable />
-        <el-button type="primary" @click="loadQuestions">搜索</el-button>
+      <div style="display: flex; justify-content: space-between; align-items: center;margin-bottom: 20px;">
         <el-button type="success" @click="goCreate" class="create-btn">新建题目</el-button>
+        <el-button @click="router.go(-1)" type="primary" plain class="back-btn">
+            <el-icon><ArrowLeft /></el-icon>
+            返回
+        </el-button>
+      </div>
+      <div class="questions-header">
+        <el-input v-model="search" placeholder="搜索题目标题/内容" class="search-input" @input="handleFilterChange" clearable />
+        <el-select v-model="filterCategory" placeholder="分类" class="filter-select" clearable @change="handleFilterChange">
+          <el-option v-for="cat in categories" :key="cat" :label="cat" :value="cat" />
+        </el-select>
+        <el-select v-model="filterDifficulty" placeholder="难度" class="filter-select" clearable @change="handleFilterChange">
+          <el-option label="简单" value="easy" />
+          <el-option label="中等" value="medium" />
+          <el-option label="困难" value="hard" />
+        </el-select>
+        <el-select v-model="filterType" placeholder="题型" class="filter-select" clearable @change="handleFilterChange">
+          <el-option label="选择题" value="multiple_choice" />
+          <el-option label="判断题" value="true_false" />
+          <el-option label="简答题" value="short_answer" />
+          <el-option label="论述题" value="essay" />
+        </el-select>
       </div>
       <el-table :data="questions" class="questions-table" stripe border>
         <el-table-column prop="title" label="题目标题" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="category" label="类别" width="120" />
-        <el-table-column prop="question_type" label="类型" width="130">
+        <el-table-column prop="category" label="类别" />
+        <el-table-column prop="question_type" label="类型">
           <template #default="{ row }">
             <el-tag size="small">{{ typeText(row.question_type) }}</el-tag>
             <el-tag size="small" :type="getDifficultyType(row.difficulty)" style="margin-left: 10px;">{{ getDifficultyText(row.difficulty) }}</el-tag>
@@ -22,7 +41,7 @@
             {{ formatDate(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="210">
+        <el-table-column label="操作" width="220">
           <template #default="{ row }">
             <el-button size="small" @click="goDetail(row.id)">详情</el-button>
             <el-button size="small" type="primary" @click="goEdit(row.id)">编辑</el-button>
@@ -65,6 +84,9 @@ const page = ref(1)
 const pageSize = ref(10)
 const search = ref('')
 const categories = ref<string[]>([])
+const filterCategory = ref('')
+const filterDifficulty = ref('')
+const filterType = ref('')
 
 const filters = {
   search: '',
@@ -73,20 +95,30 @@ const filters = {
   type: ''
 }
 
+const getCategories = async () => {
+  const response = await questionsApi.getQuestions({
+    page: 1,
+    pageSize: 10000,
+  })
+  // Extract unique categories
+  const uniqueCategories = [...new Set(response.questions.map(q => q.category).filter(Boolean))]
+  categories.value = uniqueCategories
+}
+
 const loadQuestions = async () => {
   loading.value = true
   try {
     const response = await questionsApi.getQuestions({
       page: page.value,
       pageSize: pageSize.value,
-      search: search.value
+      search: search.value,
+      category: filterCategory.value,
+      difficulty: filterDifficulty.value,
+      question_type: filterType.value
     })
     questions.value = response.questions || []
     total.value = response.total
-    
-    // Extract unique categories
-    const uniqueCategories = [...new Set(questions.value.map(q => q.category).filter(Boolean))]
-    categories.value = uniqueCategories
+
   } catch (error) {
     console.error('Failed to load questions:', error)
     ElMessage.error('加载题目失败')
@@ -155,9 +187,6 @@ const deleteQuestion = async (question: Question) => {
     ElMessage.success('删除成功')
     loadQuestions()
   } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除失败')
-    }
   }
 }
 
@@ -198,49 +227,121 @@ const handleSizeChange = (val: number) => {
   loadQuestions()
 }
 
+const handleFilterChange = () => {
+  page.value = 1
+  loadQuestions()
+}
+
 onMounted(() => {
+  getCategories()
   loadQuestions()
 })
 </script>
 
 <style scoped>
 .questions-page {
-  max-width: 1200px;
+  max-width: 1500px;
   margin: 0 auto;
+  padding: 32px 0;
+  background: none;
 }
 
 .questions-card {
-  max-width: 1100px;
+  max-width: 1300px;
   margin: 40px auto;
   padding: 32px 24px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
-  border-radius: 12px;
-  background: #fff;
+  box-shadow: 0 8px 32px rgba(64, 158, 255, 0.13);
+  border-radius: 22px;
+  background: rgba(255,255,255,0.85);
+  border: none;
+  backdrop-filter: blur(12px);
 }
 
 .questions-header {
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .search-input {
-  width: 260px;
-  margin-right: 16px;
+  width: 280px;
+  border-radius: 12px !important;
+  font-size: 15px;
 }
 
 .create-btn {
-  margin-left: auto;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #409eff, #67c23a);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 16px #409eff22;
+  border: none;
+  transition: all 0.2s;
+}
+.create-btn:hover {
+  background: linear-gradient(135deg, #67c23a, #409eff);
+  color: #fff;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 24px #67c23a33;
+}
+
+.el-button[type="primary"] {
+  border-radius: 14px;
+  background: linear-gradient(135deg, #409eff, #67c23a);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 16px #409eff22;
+  border: none;
+  transition: all 0.2s;
+}
+.el-button[type="primary"]:hover {
+  background: linear-gradient(135deg, #67c23a, #409eff);
+  color: #fff;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 24px #67c23a33;
+}
+.el-button[type="danger"] {
+  border-radius: 14px;
+}
+.el-button {
+  border-radius: 12px;
 }
 
 .questions-table {
   margin-top: 8px;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 15px;
+  overflow: hidden;
+  --el-table-header-bg-color: linear-gradient(90deg, #409eff22 0%, #67c23a22 100%);
+}
+.el-table th {
+  background: linear-gradient(90deg, #409eff22 0%, #67c23a22 100%) !important;
+  color: #222;
+  font-weight: 600;
+  font-size: 15px;
+}
+.el-table tr {
+  transition: background 0.2s;
+}
+.el-table tr:hover {
+  background: #e8f6ff !important;
+}
+.el-table .el-button {
+  min-width: 56px;
 }
 
 .questions-pagination {
-  margin-top: 24px;
+  margin-top: 28px;
   text-align: right;
+}
+
+.filter-select {
+  width: 120px;
+  margin-right: 8px;
+  border-radius: 12px !important;
 }
 </style> 

@@ -10,7 +10,7 @@ export const submitAnswer = async (req: Request, res: Response): Promise<void> =
     // Check if question exists and is active
     const [questions] = await pool.execute(
       'SELECT * FROM questions WHERE id = ? AND is_active = true',
-      [question_id]
+      [parseInt(question_id.toString())]
     );
 
     const question = (questions as any[])[0];
@@ -23,7 +23,7 @@ export const submitAnswer = async (req: Request, res: Response): Promise<void> =
     // Check if student already answered this question
     const [existingAnswers] = await pool.execute(
       'SELECT id FROM student_answers WHERE student_id = ? AND question_id = ?',
-      [studentId, question_id]
+      [studentId, parseInt(question_id.toString())]
     );
 
     if ((existingAnswers as any[]).length > 0) {
@@ -45,7 +45,7 @@ export const submitAnswer = async (req: Request, res: Response): Promise<void> =
       `INSERT INTO student_answers (
         student_id, question_id, answer, is_correct, score
       ) VALUES (?, ?, ?, ?, ?)`,
-      [studentId, question_id, answer, isCorrect, score]
+      [studentId, parseInt(question_id.toString()), answer, isCorrect, score]
     );
 
     res.status(201).json({
@@ -156,9 +156,9 @@ export const getQuestionStats = async (req: Request, res: Response): Promise<voi
     }
 
     // Get question details
-    const [questions] = await pool.execute(
+    const [questions] = await pool.query(
       'SELECT * FROM questions WHERE id = ?',
-      [questionId]
+      [parseInt(questionId)]
     );
 
     const question = (questions as any[])[0];
@@ -169,7 +169,7 @@ export const getQuestionStats = async (req: Request, res: Response): Promise<voi
     }
 
     // Get answer statistics
-    const [answerStats] = await pool.execute(
+    const [answerStats] = await pool.query(
       `SELECT 
         COUNT(*) as total_answers,
         SUM(CASE WHEN is_correct = true THEN 1 ELSE 0 END) as correct_answers,
@@ -178,7 +178,7 @@ export const getQuestionStats = async (req: Request, res: Response): Promise<voi
         MAX(score) as max_score
        FROM student_answers 
        WHERE question_id = ?`,
-      [questionId]
+      [parseInt(questionId)]
     );
 
     const stats = (answerStats as any[])[0];
@@ -213,14 +213,14 @@ export const submitBatchAnswers = async (req: Request, res: Response): Promise<a
     for (const item of answers) {
       const { question_id, answer } = item;
       // 查题目
-      const [questions] = await pool.query('SELECT * FROM questions WHERE id = ? AND is_active = true', [question_id]);
+      const [questions] = await pool.query('SELECT * FROM questions WHERE id = ? AND is_active = true', [parseInt(question_id.toString())]);
       const question = (questions as any[])[0];
       if (!question) {
         results.push({ question_id, correct: false, score: 0, error: '题目不存在' });
         continue;
       }
       // 查是否已答过
-      const [existing] = await pool.query('SELECT id FROM student_answers WHERE student_id = ? AND question_id = ?', [studentId, question_id]);
+      const [existing] = await pool.query('SELECT id FROM student_answers WHERE student_id = ? AND question_id = ?', [studentId, parseInt(question_id.toString())]);
       if ((existing as any[]).length > 0) {
         results.push({ question_id, correct: false, score: 0, error: '已答过' });
         continue;
@@ -237,7 +237,7 @@ export const submitBatchAnswers = async (req: Request, res: Response): Promise<a
       // 入库
       await pool.execute(
         'INSERT INTO student_answers (student_id, question_id, answer, is_correct, score, session_id) VALUES (?, ?, ?, ?, ?, ?)',
-        [studentId, question_id, answer, isCorrect, score, session_id || null]
+        [studentId, parseInt(question_id.toString()), answer, isCorrect, score, session_id || null]
       );
       results.push({ question_id, correct: isCorrect, score, points: question.points });
     }
@@ -255,23 +255,61 @@ export const submitBatchAnswers = async (req: Request, res: Response): Promise<a
 
 export const getRanking = async (req: Request, res: Response) => {
   try {
-    // 可选：根据登录用户的 IP 获取前缀
-    // const ipPrefix = req.ip.split('.').slice(0, 3).join('.') + '.';
-    // const ipCondition = 'AND u.last_ip LIKE ?';
-    // const params = [ipPrefix + '%'];
+    const { category } = req.query;
+    
+    let baseQuery = `
+      FROM users u
+      JOIN student_answers sa ON u.id = sa.student_id
+      JOIN questions q ON sa.question_id = q.id
+      WHERE u.role = 'student'
+    `;
+    const params: any[] = [];
+
+    // 如果指定了类别，添加类别筛选条件
+    if (category) {
+      baseQuery += ' AND q.category = ?';
+      params.push(category);
+    }
 
     const [rows] = await pool.query(
-      `SELECT u.id, u.username, SUM(sa.score) as total_score
-       FROM users u
-       JOIN student_answers sa ON u.id = sa.student_id
-       WHERE u.role = 'student'
+      `SELECT 
+        u.id, 
+        u.username, 
+        COUNT(sa.id) as total_answered,
+        SUM(CASE WHEN sa.is_correct = true THEN 1 ELSE 0 END) as correct_answers,
+        SUM(sa.score) as total_score,
+        SUM(q.points) as total_possible_score,
+        ROUND((SUM(CASE WHEN sa.is_correct = true THEN 1 ELSE 0 END) / COUNT(sa.id)) * 100, 2) as accuracy_rate,
+        ROUND((SUM(sa.score) / SUM(q.points)) * 100, 2) as score_rate
+       ${baseQuery}
        GROUP BY u.id, u.username
-       ORDER BY total_score DESC
-       LIMIT 100`
-      // , params
+       HAVING total_answered > 0
+       ORDER BY 
+         (accuracy_rate * 0.4 + score_rate * 0.3 + total_answered * 0.3) DESC,
+         total_score DESC,
+         accuracy_rate DESC
+       LIMIT 100`,
+      params
     );
-    res.json({ ranking: rows });
+
+    // 计算综合得分并添加排名
+    const rankingWithScore = (rows as any[]).map((row, index) => {
+      const comprehensiveScore = (
+        (row.accuracy_rate * 0.4) + 
+        (row.score_rate * 0.3) + 
+        (Math.min(row.total_answered / 10, 10) * 0.3) // 答题数量权重，最多10分
+      );
+      
+      return {
+        ...row,
+        rank: index + 1,
+        comprehensive_score: Math.round(comprehensiveScore * 100) / 100
+      };
+    });
+
+    res.json({ ranking: rankingWithScore });
   } catch (error) {
+    console.error('Get ranking error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -279,14 +317,135 @@ export const getRanking = async (req: Request, res: Response) => {
 export const getQuestionAnalysis = async (req: Request, res: Response): Promise<any> => {
   try {
     const { questionId } = req.params;
-    const [questions] = await pool.query('SELECT id, analysis FROM questions WHERE id = ?', [questionId]);
+    const studentId = (req as any).user.id;
+
+    // Get question details with analysis
+    const [questions] = await pool.query(
+      'SELECT * FROM questions WHERE id = ? AND is_active = true',
+      [parseInt(questionId)]
+    );
+
     const question = (questions as any[])[0];
+
     if (!question) {
-      return res.status(404).json({ message: 'Question not found' });
+      res.status(404).json({ message: 'Question not found' });
+      return;
     }
-    res.json({ questionId: question.id, analysis: question.analysis });
+
+    // Get student's answer for this question
+    const [answers] = await pool.query(
+      'SELECT * FROM student_answers WHERE student_id = ? AND question_id = ?',
+      [studentId, parseInt(questionId)]
+    );
+
+    const studentAnswer = (answers as any[])[0];
+
+    if (!studentAnswer) {
+      res.status(404).json({ message: 'Answer not found' });
+      return;
+    }
+
+    res.json({
+      question,
+      studentAnswer,
+      analysis: question.analysis || '暂无解析'
+    });
   } catch (error) {
     console.error('Get question analysis error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// 获取错题统计（按时间分组）
+export const getWrongAnswerStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const studentId = (req as any).user.id;
+
+    // 获取最近30天的答题统计，按日期分组
+    const [stats] = await pool.query(
+      `SELECT 
+        DATE(sa.submitted_at) as date,
+        COUNT(*) as total_answered,
+        SUM(CASE WHEN sa.is_correct = true THEN 1 ELSE 0 END) as correct_answers,
+        SUM(CASE WHEN sa.is_correct = false THEN 1 ELSE 0 END) as wrong_answers
+       FROM student_answers sa 
+       WHERE sa.student_id = ? 
+       AND sa.submitted_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+       GROUP BY DATE(sa.submitted_at)
+       ORDER BY date ASC`,
+      [studentId]
+    );
+
+    res.json({ stats });
+  } catch (error) {
+    console.error('Get wrong answer stats error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// 获取错题列表
+export const getWrongAnswers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const studentId = (req as any).user.id;
+    const { page = 1, pageSize = 10 } = req.query;
+
+    // 统计错题总数
+    const [countResult] = await pool.execute(
+      `SELECT COUNT(*) as total
+       FROM student_answers sa
+       JOIN questions q ON sa.question_id = q.id
+       WHERE sa.student_id = ? AND sa.is_correct = false`,
+      [studentId]
+    );
+
+    const total = (countResult as any[])[0].total;
+
+    // 分页获取错题列表
+    const pageNum = Math.max(1, parseInt(String(page)) || 1);
+    const pageSizeNum = Math.max(1, parseInt(String(pageSize)) || 10);
+    const offset = (pageNum - 1) * pageSizeNum;
+
+    const [wrongAnswers] = await pool.query(
+      `SELECT 
+        sa.id, sa.question_id, sa.answer, sa.submitted_at, sa.score,
+        q.title, q.content, q.question_type, q.points, q.category, q.analysis
+       FROM student_answers sa
+       JOIN questions q ON sa.question_id = q.id
+       WHERE sa.student_id = ? AND sa.is_correct = false
+       ORDER BY sa.submitted_at DESC
+       LIMIT ? OFFSET ?`,
+      [studentId, pageSizeNum, offset]
+    );
+
+    res.json({ 
+      wrongAnswers, 
+      total,
+      page: pageNum,
+      pageSize: pageSizeNum
+    });
+  } catch (error) {
+    console.error('Get wrong answers error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getCategoryAnswerStats = async (req: Request, res: Response) => {
+  try {
+    const studentId = (req as any).user.id;
+    const [rows] = await pool.query(
+      `SELECT 
+        q.category, 
+        COUNT(sa.id) as total, 
+        SUM(CASE WHEN sa.is_correct = true THEN 1 ELSE 0 END) as correct
+      FROM student_answers sa
+      JOIN questions q ON sa.question_id = q.id
+      WHERE sa.student_id = ?
+      GROUP BY q.category`,
+      [studentId]
+    );
+    res.json({ stats: rows });
+  } catch (error) {
+    console.error('Get category answer stats error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 }; 
