@@ -56,3 +56,18 @@ export async function getWrongAnswers(params?: { page?: number, pageSize?: numbe
 export async function getCategoryAnswerStats() {
   return api.get('/answers/category-stats');
 }
+
+// 调用DeepSeek AI问答
+export const askDeepSeek = async (question: string, context?: any) => {
+  const response = await api.post('/answers/ask-deepseek', {
+    question,
+    questionTitle: context?.questionTitle,
+    questionContent: context?.questionContent,
+    studentAnswer: context?.studentAnswer,
+    correctAnswer: context?.correctAnswer,
+    analysis: context?.analysis
+  }, {
+    timeout: 3000000
+  });
+  return (<any>response).answer;
+};

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import pool from '../config/database';
 import { SubmitAnswerRequest } from '../types';
+import axios from 'axios';
 
 export const submitAnswer = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -447,5 +448,71 @@ export const getCategoryAnswerStats = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Get category answer stats error:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// DeepSeek AI 问答接口
+export const askDeepSeek = async (req: Request, res: Response) => {
+  try {
+    const { question } = req.body;
+    
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({ message: '问题不能为空' });
+    }
+
+    // 构建上下文信息
+    const context = `
+题目：${req.body.questionTitle || '未知题目'}
+题目内容：${req.body.questionContent || '未知内容'}
+学生答案：${req.body.studentAnswer || '无'}
+正确答案：${req.body.correctAnswer || '未知'}
+解析：${req.body.analysis || '无'}
+
+学生问题：${question}
+
+请基于以上题目信息，回答学生的问题。回答要详细、准确、有针对性。
+`;
+
+    // 调用AI服务
+    const prompt = `请回答以下问题：${context}请用中文回答，回答要详细、准确、有针对性，帮助学生理解这道题目。`;
+
+    // 由于AI服务主要用于生成题目，这里我们使用一个简化的方式
+    // 在实际项目中，你可能需要调用专门的问答API
+    const response = await axios.post(
+      'https://api.deepseek.com/v1/chat/completions', 
+      {
+        model: 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
+            content: '你是一个专业的教学助手，能够帮助学生理解题目和解答疑问。'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000
+      },
+      {
+        headers: {
+          'Authorization': `Bearer sk-64f0e2b0cece44189652ffab25949c46`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 3000000 // 3000秒超时
+      }
+    );
+
+    const data: any = response.data;
+    const answer = data.choices[0].message.content;
+
+    res.json({ answer });
+  } catch (error) {
+    console.error('DeepSeek问答失败:', error);
+    res.status(500).json({ 
+      message: 'AI服务暂时不可用，请稍后重试',
+      error: error instanceof Error ? error.message : '未知错误'
+    });
   }
 }; 

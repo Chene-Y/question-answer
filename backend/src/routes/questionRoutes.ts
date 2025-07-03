@@ -6,7 +6,9 @@ import {
   updateQuestion,
   deleteQuestion,
   getRandomQuestions,
-  importExcelQuestions
+  importExcelQuestions,
+  generateQuestionsByAI,
+  batchCreateQuestions
 } from '../controllers/questionController';
 import { authenticateToken, requireTeacher } from '../middleware/auth';
 import { createQuestionValidation } from '../utils/validation';
@@ -30,5 +32,7 @@ router.post('/', requireTeacher, createQuestionValidation, createQuestion);
 router.put('/:id', requireTeacher, createQuestionValidation, updateQuestion);
 router.delete('/:id', requireTeacher, deleteQuestion);
 router.post('/import-excel', requireTeacher, upload.single('file') as any, importExcelQuestions);
+router.post('/generate-ai', requireTeacher, generateQuestionsByAI);
+router.post('/batch-create', requireTeacher, batchCreateQuestions);
 
 export default router; 

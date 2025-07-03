@@ -81,7 +81,7 @@
     <el-dialog
       v-model="analysisDialogVisible"
       title="错题解析"
-      width="70%"
+      width="80%"
       :before-close="handleAnalysisDialogClose"
     >
       <div v-if="currentAnalysis" class="analysis-content">
@@ -111,6 +111,90 @@
           <h4>解析</h4>
           <div class="analysis-text">{{ currentAnalysis.analysis }}</div>
         </div>
+
+        <!-- DeepSeek AI 问答区域 -->
+        <div class="ai-qa-section">
+          <div class="ai-qa-header">
+            <h4>
+              <el-icon><Star /></el-icon>
+              DeepSeek AI 智能问答
+            </h4>
+            <el-button 
+              type="primary" 
+              size="small" 
+              @click="askDeepSeek"
+              :loading="aiLoading"
+              :disabled="!aiQuestion.trim()"
+            >
+              <el-icon><Star /></el-icon>
+              {{ aiLoading ? 'AI思考中...' : '发送问题' }}
+            </el-button>
+          </div>
+          
+          <div class="ai-qa-input">
+            <el-input
+              v-model="aiQuestion"
+              type="textarea"
+              :rows="3"
+              placeholder="向DeepSeek AI提问，例如：'这道题为什么我答错了？'、'如何避免这类错误？'、'相关知识点有哪些？'"
+              maxlength="500"
+              show-word-limit
+            />
+          </div>
+
+          <div v-if="aiAnswer" class="ai-answer">
+            <div class="ai-answer-header">
+              <el-icon><Star /></el-icon>
+              <span>DeepSeek AI 回答</span>
+            </div>
+            <div class="ai-answer-content">{{ aiAnswer }}</div>
+            <div class="ai-answer-actions">
+              <el-button size="small" @click="copyAnswer">
+                <el-icon><CopyDocument /></el-icon>
+                复制回答
+              </el-button>
+              <el-button size="small" @click="clearAIAnswer">
+                <el-icon><Delete /></el-icon>
+                清空回答
+              </el-button>
+            </div>
+          </div>
+
+          <!-- 预设问题快捷按钮 -->
+          <div class="preset-questions">
+            <div class="preset-label">快捷问题：</div>
+            <div class="preset-buttons">
+              <el-button 
+                size="small" 
+                @click="setPresetQuestion('这道题为什么我答错了？')"
+                :disabled="aiLoading"
+              >
+                为什么答错了？
+              </el-button>
+              <el-button 
+                size="small" 
+                @click="setPresetQuestion('如何避免这类错误？')"
+                :disabled="aiLoading"
+              >
+                如何避免错误？
+              </el-button>
+              <el-button 
+                size="small" 
+                @click="setPresetQuestion('相关知识点有哪些？')"
+                :disabled="aiLoading"
+              >
+                相关知识点
+              </el-button>
+              <el-button 
+                size="small" 
+                @click="setPresetQuestion('这道题的解题思路是什么？')"
+                :disabled="aiLoading"
+              >
+                解题思路
+              </el-button>
+            </div>
+          </div>
+        </div>
       </div>
     </el-dialog>
   </div>
@@ -119,8 +203,9 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, onUnmounted } from 'vue'
 import * as answersApi from '@/api/answers'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowLeft, Star, CopyDocument, Delete } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
+import { ElMessage } from 'element-plus'
 
 
 // 统计相关
@@ -139,6 +224,11 @@ const wrongAnswersPageSize = ref(10)
 // 错题解析弹窗
 const analysisDialogVisible = ref(false)
 const currentAnalysis = ref<any>(null)
+
+// DeepSeek AI 相关
+const aiLoading = ref(false)
+const aiQuestion = ref('')
+const aiAnswer = ref('')
 
 // 加载错题统计
 const loadStats = async () => {
@@ -358,12 +448,58 @@ const showAnalysis = async (item: any) => {
 const handleAnalysisDialogClose = () => {
   analysisDialogVisible.value = false
   currentAnalysis.value = null
+  aiQuestion.value = ''
+  aiAnswer.value = ''
 }
 
 // 格式化日期
 const formatDate = (date: string) => {
   if (!date) return ''
   return new Date(date).toLocaleDateString('zh-CN')
+}
+
+// DeepSeek AI 相关
+const askDeepSeek = async () => {
+  if (!aiQuestion.value.trim() || !currentAnalysis.value) {
+    return;
+  }
+  
+  aiLoading.value = true;
+  try {
+    const context = {
+      questionTitle: currentAnalysis.value.question.title,
+      questionContent: currentAnalysis.value.question.content,
+      studentAnswer: currentAnalysis.value.studentAnswer.answer,
+      correctAnswer: currentAnalysis.value.question.correct_answer,
+      analysis: currentAnalysis.value.analysis
+    };
+    
+    const response = await answersApi.askDeepSeek(aiQuestion.value, context);
+    aiAnswer.value = response;
+  } catch (error) {
+    console.error('Failed to ask DeepSeek:', error);
+    ElMessage.error('AI服务暂时不可用，请稍后重试');
+  } finally {
+    aiLoading.value = false;
+  }
+}
+
+const copyAnswer = async () => {
+  try {
+    await navigator.clipboard.writeText(aiAnswer.value);
+    ElMessage.success('回答已复制到剪贴板');
+  } catch (error) {
+    console.error('复制失败:', error);
+    ElMessage.error('复制失败，请手动复制');
+  }
+}
+
+const clearAIAnswer = () => {
+  aiAnswer.value = '';
+}
+
+const setPresetQuestion = (question: string) => {
+  aiQuestion.value = question;
 }
 
 onMounted(async () => {
@@ -610,5 +746,127 @@ onUnmounted(() => {
   background: #f5f7fa;
   border-radius: 8px;
   border-left: 4px solid #409eff;
+}
+
+.ai-qa-section {
+  margin-top: 32px;
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafd 0%, #e8f6ff 100%);
+  border-radius: 12px;
+  border: 2px solid #e8f6ff;
+}
+
+.ai-qa-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.ai-qa-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-qa-header h4 .el-icon {
+  color: #667eea;
+  font-size: 18px;
+}
+
+.ai-qa-input {
+  margin-bottom: 16px;
+}
+
+.ai-qa-input :deep(.el-textarea__inner) {
+  border-radius: 8px;
+  border: 2px solid #e8f6ff;
+  transition: all 0.3s ease;
+}
+
+.ai-qa-input :deep(.el-textarea__inner):focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.ai-answer {
+  margin-top: 16px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  border-left: 4px solid #667eea;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.1);
+}
+
+.ai-answer-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #667eea;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ai-answer-content {
+  color: #333;
+  line-height: 1.8;
+  margin-bottom: 16px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.ai-answer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.preset-questions {
+  margin-top: 20px;
+}
+
+.preset-label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preset-buttons .el-button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #e8f6ff;
+  color: #667eea;
+  transition: all 0.3s ease;
+}
+
+.preset-buttons .el-button:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.preset-buttons .el-button:disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 </style> 

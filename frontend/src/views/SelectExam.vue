@@ -144,7 +144,10 @@ const quickOptions = ref<any[]>([]);
 
 onMounted(async () => {
   // 获取所有题目，提取科目
-  const res = await getQuestions();
+  const res = await getQuestions({
+    page: 1,
+    pageSize: 10000
+  });
   if (res && res.questions) {
     const set = new Set<string>();
     res.questions.forEach((q: any) => {

@@ -46,6 +46,12 @@
             </template>
             <template v-else>
               <el-col :span="8">
+                <el-button type="warning" size="large" class="quick-action-btn" @click="goAIGenerate">
+                  <el-icon style="font-size:32px;margin-bottom:8px;"><Star /></el-icon>
+                  <div>AI智能出题</div>
+                </el-button>
+              </el-col>
+              <el-col :span="8">
                 <el-button type="primary" size="large" class="quick-action-btn" @click="goQuestions">
                   <el-icon style="font-size:32px;margin-bottom:8px;"><Document /></el-icon>
                   <div>题目管理</div>
@@ -57,7 +63,7 @@
                   <div>批量导入</div>
                 </el-button>
               </el-col>
-              <el-col :span="8">
+              <el-col :span="8" style="margin-top: 16px;">
                 <el-button type="info" size="large" class="quick-action-btn" @click="goStats">
                   <el-icon style="font-size:32px;margin-bottom:8px;"><PieChart /></el-icon>
                   <div>题目统计</div>
@@ -65,6 +71,134 @@
               </el-col>
             </template>
           </el-row>
+        </el-card>
+        <el-card class="deepseek-card glass-card">
+          <div class="deepseek-header">
+            <h3>
+              <el-icon><Star /></el-icon>
+              DeepSeek AI 智能问答
+            </h3>
+            <el-button 
+              type="primary" 
+              size="small" 
+              @click="showDeepSeekDialog"
+              :loading="deepSeekDialog.loading"
+              :disabled="!deepSeekDialog.question.trim()"
+            >
+              <el-icon><Star /></el-icon>
+              {{ deepSeekDialog.loading ? 'AI思考中...' : '发送问题' }}
+            </el-button>
+          </div>
+          
+          <div class="deepseek-input">
+            <el-input
+              v-model="deepSeekDialog.question"
+              type="textarea"
+              :rows="3"
+              :placeholder="isStudent ? `向DeepSeek AI提问，例如：'如何提高学习效率？'、'有什么好的学习方法？'、'如何准备考试？'` : `向DeepSeek AI提问，例如：'如何设计高质量的题目？'、'如何编写题目解析？'、'如何设置题目难度？'、'如何设计题目选项？'`"
+              maxlength="500"
+              show-word-limit
+            />
+          </div>
+
+          <div v-if="deepSeekDialog.answer" class="deepseek-answer">
+            <div class="deepseek-answer-header">
+              <el-icon><Star /></el-icon>
+              <span>DeepSeek AI 回答</span>
+            </div>
+            <div class="deepseek-answer-content">{{ deepSeekDialog.answer }}</div>
+            <div class="deepseek-answer-actions">
+              <el-button size="small" @click="copyDeepSeekAnswer">
+                <el-icon><CopyDocument /></el-icon>
+                复制回答
+              </el-button>
+              <el-button size="small" @click="clearDeepSeekAnswer">
+                <el-icon><Delete /></el-icon>
+                清空回答
+              </el-button>
+            </div>
+          </div>
+
+          <!-- 预设问题快捷按钮 -->
+          <div class="deepseek-preset-questions">
+            <div class="preset-label">快捷问题：</div>
+            <div class="preset-buttons">
+              <template v-if="isStudent">
+                <el-button 
+                  size="small" 
+                  @click="setPresetQuestion('如何提高学习效率？')"
+                  :disabled="deepSeekDialog.loading"
+                >
+                  学习效率
+                </el-button>
+                <el-button 
+                  size="small" 
+                  @click="setPresetQuestion('有什么好的学习方法？')"
+                  :disabled="deepSeekDialog.loading"
+                >
+                  学习方法
+                </el-button>
+                <el-button 
+                  size="small" 
+                  @click="setPresetQuestion('如何准备考试？')"
+                  :disabled="deepSeekDialog.loading"
+                >
+                  考试准备
+                </el-button>
+                <el-button 
+                  size="small" 
+                  @click="setPresetQuestion('如何克服学习困难？')"
+                  :disabled="deepSeekDialog.loading"
+                >
+                  克服困难
+                </el-button>
+              </template>
+              <template v-else>
+                <el-button 
+                  size="small" 
+                  @click="setPresetQuestion('如何设计高质量的题目？')"
+                  :disabled="deepSeekDialog.loading"
+                >
+                  题目设计
+                </el-button>
+                <el-button 
+                  size="small" 
+                  @click="setPresetQuestion('如何编写详细的题目解析？')"
+                  :disabled="deepSeekDialog.loading"
+                >
+                  题目解析
+                </el-button>
+                <el-button 
+                  size="small" 
+                  @click="setPresetQuestion('如何合理设置题目难度？')"
+                  :disabled="deepSeekDialog.loading"
+                >
+                  难度设置
+                </el-button>
+                <el-button 
+                  size="small" 
+                  @click="setPresetQuestion('如何设计有效的题目选项？')"
+                  :disabled="deepSeekDialog.loading"
+                >
+                  选项设计
+                </el-button>
+                <el-button 
+                  size="small" 
+                  @click="setPresetQuestion('如何评估题目的质量？')"
+                  :disabled="deepSeekDialog.loading"
+                >
+                  质量评估
+                </el-button>
+                <el-button 
+                  size="small" 
+                  @click="setPresetQuestion('如何设计不同题型的题目？')"
+                  :disabled="deepSeekDialog.loading"
+                >
+                  题型设计
+                </el-button>
+              </template>
+            </div>
+          </div>
         </el-card>
       </el-col>
       <el-col :span="8">
@@ -131,7 +265,8 @@ import { useUserStore } from '@/stores/user'
 import * as questionsApi from '@/api/questions'
 import * as answersApi from '@/api/answers'
 import { useRouter } from 'vue-router'
-import { Edit, PieChart, Medal, Document, UploadFilled, Warning } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { Edit, PieChart, Medal, Document, UploadFilled, Warning, Star, CopyDocument, Delete } from '@element-plus/icons-vue'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -186,11 +321,55 @@ function goImport() {
 function goWrongAnswers() {
   router.push('/wrong-answers')
 }
+function goAIGenerate() {
+  router.push('/ai-generate')
+}
 
 function copyEmail() {
   if (userStore.user?.email) {
     navigator.clipboard.writeText(userStore.user.email)
   }
+}
+
+const deepSeekDialog = ref({
+  question: '',
+  answer: '',
+  loading: false
+})
+
+async function showDeepSeekDialog() {
+  if (!deepSeekDialog.value.question.trim()) return
+
+  deepSeekDialog.value.loading = true
+  try {
+    const response = await answersApi.askDeepSeek(deepSeekDialog.value.question)
+    deepSeekDialog.value.answer = response
+    ElMessage.success('AI回答已生成')
+  } catch (error: any) {
+    ElMessage.error('AI回答生成失败，请稍后重试')
+  } finally {
+    deepSeekDialog.value.loading = false
+  }
+}
+
+async function copyDeepSeekAnswer() {
+  if (!deepSeekDialog.value.answer) return
+  
+  try {
+    await navigator.clipboard.writeText(deepSeekDialog.value.answer)
+    ElMessage.success('回答已复制到剪贴板')
+  } catch (error) {
+    ElMessage.error('复制失败')
+  }
+}
+
+function clearDeepSeekAnswer() {
+  deepSeekDialog.value.question = ''
+  deepSeekDialog.value.answer = ''
+}
+
+function setPresetQuestion(question: string) {
+  deepSeekDialog.value.question = question
 }
 
 onMounted(() => {
@@ -205,7 +384,7 @@ onMounted(() => {
   padding: 20px;
 }
 .dashboard-row {
-  margin-top: 32px;
+  /* margin-top: 32px; */
 }
 .glass-card {
   background: rgba(255,255,255,0.85) !important;
@@ -380,5 +559,112 @@ onMounted(() => {
   .stat-number {
     font-size: 18px;
   }
+  
+  /* DeepSeek卡片移动端适配 */
+  .deepseek-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .deepseek-header h3 {
+    font-size: 16px;
+  }
+  
+  .deepseek-input {
+    padding: 12px 16px;
+  }
+  
+  .deepseek-answer {
+    margin: 0 16px 16px 16px;
+    padding: 12px 16px;
+  }
+  
+  .deepseek-preset-questions {
+    margin: 12px 16px 16px 16px;
+  }
+  
+  .preset-buttons {
+    flex-direction: column;
+  }
+  
+  .preset-buttons .el-button {
+    width: 100%;
+  }
+}
+.deepseek-card {
+  margin-top: 20px;
+  background: linear-gradient(135deg, #e8f6ff 0%, #f3ffe6 100%) !important;
+  border: 1px solid #e4e7ed;
+}
+.deepseek-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e8f6ff;
+}
+.deepseek-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #409eff;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.deepseek-input {
+  padding: 16px 20px;
+}
+.deepseek-answer {
+  padding: 16px 20px;
+  border-top: 1px solid #e8f6ff;
+  background: linear-gradient(90deg, #f8fafd 60%, #e8f6ff 100%);
+  margin: 0 20px 20px 20px;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px #409eff0a;
+}
+.deepseek-answer-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #409eff;
+}
+.deepseek-answer-content {
+  margin-bottom: 16px;
+  line-height: 1.6;
+  color: #333;
+  font-size: 15px;
+}
+.deepseek-answer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.deepseek-preset-questions {
+  margin: 16px 20px 20px 20px;
+}
+.preset-label {
+  font-weight: 600;
+  color: #409eff;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+.preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.preset-buttons .el-button {
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+  min-width: 80px;
+}
+.preset-buttons .el-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
 }
 </style> 

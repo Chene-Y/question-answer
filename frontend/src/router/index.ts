@@ -95,6 +95,12 @@ const router = createRouter({
       name: 'ImportQuestions',
       component: ImportQuestions,
       meta: { requiresAuth: true, role: 'teacher' }
+    },
+    {
+      path: '/ai-generate',
+      name: 'AIGenerateQuestions',
+      component: () => import('@/views/AIGenerateQuestions.vue'),
+      meta: { requiresAuth: true, requiresTeacher: true }
     }
   ]
 })

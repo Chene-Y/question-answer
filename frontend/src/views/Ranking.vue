@@ -8,24 +8,81 @@
             <p class="subtitle">综合答题能力排名</p>
           </div>
           <div class="header-right">
-            <!-- <el-select 
-              v-model="selectedCategory" 
-              placeholder="选择类别" 
-              clearable 
-              @change="loadRanking"
-              class="category-select"
-            >
-              <el-option label="全部类别" value="" />
-              <el-option label="数学" value="数学" />
-              <el-option label="语文" value="语文" />
-              <el-option label="英语" value="英语" />
-              <el-option label="物理" value="物理" />
-              <el-option label="化学" value="化学" />
-              <el-option label="生物" value="生物" />
-              <el-option label="历史" value="历史" />
-              <el-option label="地理" value="地理" />
-              <el-option label="政治" value="政治" />
-            </el-select> -->
+            <el-select 
+                  v-model="selectedCategory" 
+                  placeholder="请选择科目" 
+                  class="form-select enhanced-select"
+                  size="large"
+                  allow-create
+                  filterable
+                >
+                  <el-option label="数学" value="数学">
+                    <div class="option-content">
+                      <el-icon><Plus /></el-icon>
+                      <span>数学</span>
+                    </div>
+                  </el-option>
+                  <el-option label="语文" value="语文">
+                    <div class="option-content">
+                      <el-icon><Document /></el-icon>
+                      <span>语文</span>
+                    </div>
+                  </el-option>
+                  <el-option label="英语" value="英语">
+                    <div class="option-content">
+                      <el-icon><ChatDotRound /></el-icon>
+                      <span>英语</span>
+                    </div>
+                  </el-option>
+                  <el-option label="物理" value="物理">
+                    <div class="option-content">
+                      <el-icon><Lightning /></el-icon>
+                      <span>物理</span>
+                    </div>
+                  </el-option>
+                  <el-option label="化学" value="化学">
+                    <div class="option-content">
+                      <el-icon><Tools /></el-icon>
+                      <span>化学</span>
+                    </div>
+                  </el-option>
+                  <el-option label="生物" value="生物">
+                    <div class="option-content">
+                      <el-icon><Sunny /></el-icon>
+                      <span>生物</span>
+                    </div>
+                  </el-option>
+                  <el-option label="历史" value="历史">
+                    <div class="option-content">
+                      <el-icon><Clock /></el-icon>
+                      <span>历史</span>
+                    </div>
+                  </el-option>
+                  <el-option label="地理" value="地理">
+                    <div class="option-content">
+                      <el-icon><Location /></el-icon>
+                      <span>地理</span>
+                    </div>
+                  </el-option>
+                  <el-option label="政治" value="政治">
+                    <div class="option-content">
+                      <el-icon><Document /></el-icon>
+                      <span>政治</span>
+                    </div>
+                  </el-option>
+                  <el-option label="计算机" value="计算机">
+                    <div class="option-content">
+                      <el-icon><Monitor /></el-icon>
+                      <span>计算机</span>
+                    </div>
+                  </el-option>
+                  <el-option label="其他" value="其他">
+                    <div class="option-content">
+                      <el-icon><More /></el-icon>
+                      <span>其他</span>
+                    </div>
+                  </el-option>
+                </el-select>
             <el-button @click="goBack" type="primary" plain>
               <el-icon><ArrowLeft /></el-icon>
               返回
@@ -132,7 +189,7 @@
                     :stroke-width="8"
                     :show-text="false"
                   />
-                  <span class="accuracy-text">{{ row.accuracy_rate.toFixed(2) }}%</span>
+                  <span class="accuracy-text">{{ row.accuracy_rate }}%</span>
                 </div>
               </template>
             </el-table-column>
@@ -152,7 +209,7 @@
                     :stroke-width="8"
                     :show-text="false"
                   />
-                  <span class="score-rate-text">{{ row.score_rate.toFixed(2) }}%</span>
+                  <span class="score-rate-text">{{ row.score_rate }}%</span>
                 </div>
               </template>
             </el-table-column>
@@ -168,7 +225,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getRanking } from '@/api/answers';
 import { ElMessage } from 'element-plus';
-import { ArrowLeft } from '@element-plus/icons-vue';
+import { ArrowLeft, Plus, Document, ChatDotRound, Lightning, Tools, Sunny, Clock, Location, Monitor, More } from '@element-plus/icons-vue';
 
 const route = useRoute();
 const router = useRouter();

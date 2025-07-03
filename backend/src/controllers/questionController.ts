@@ -5,6 +5,7 @@ import multer from 'multer';
 import xlsx from 'xlsx';
 import path from 'path';
 import fs from 'fs';
+import { getDefaultAIService } from '../services/aiService';
 
 export const createQuestion = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -314,5 +315,100 @@ export const importExcelQuestions = async (req: Request, res: Response): Promise
   } catch (error) {
     console.error('Import Excel questions error:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// AI生成题目
+export const generateQuestionsByAI = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { subject, knowledgePoints, count } = req.body;
+    
+    if (!subject || !knowledgePoints || !count) {
+      res.status(400).json({ message: '科目、知识点和题量都是必需的' });
+      return;
+    }
+
+    // 使用AI服务生成题目
+    const aiService = getDefaultAIService();
+    const generatedQuestions = await aiService.generateQuestions({
+      subject,
+      knowledgePoints,
+      count: parseInt(count)
+    });
+
+    res.json({
+      message: 'AI生成题目成功',
+      questions: generatedQuestions
+    });
+  } catch (error) {
+    console.error('AI生成题目错误:', error);
+    res.status(500).json({ 
+      message: error instanceof Error ? error.message : 'AI生成题目失败' 
+    });
+  }
+};
+
+// 批量创建题目
+export const batchCreateQuestions = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { questions } = req.body;
+    const userId = 8; //ai生成题目不记录用户
+
+    if (!Array.isArray(questions) || questions.length === 0) {
+      res.status(400).json({ message: '题目列表不能为空' });
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < questions.length; i++) {
+      try {
+        const questionData = questions[i];
+        
+        // 验证必填字段
+        if (!questionData.title || !questionData.content || !questionData.question_type) {
+          errors.push(`第${i + 1}题：缺少必填字段`);
+          failCount++;
+          continue;
+        }
+
+        await pool.execute(
+          `INSERT INTO questions (
+            title, content, question_type, options, correct_answer, 
+            points, difficulty, category, analysis, created_by
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            questionData.title,
+            questionData.content,
+            questionData.question_type,
+            questionData.options ? JSON.stringify(questionData.options) : null,
+            questionData.correct_answer,
+            questionData.points || 1,
+            questionData.difficulty || 'medium',
+            questionData.category || '其他',
+            questionData.analysis || '',
+            userId
+          ]
+        );
+
+        successCount++;
+      } catch (error) {
+        console.error(`创建第${i + 1}题失败:`, error);
+        errors.push(`第${i + 1}题：创建失败`);
+        failCount++;
+      }
+    }
+
+    res.json({
+      message: '批量创建完成',
+      successCount,
+      failCount,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error('批量创建题目错误:', error);
+    res.status(500).json({ message: '批量创建题目失败' });
   }
 }; 

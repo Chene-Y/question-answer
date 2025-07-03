@@ -9,7 +9,8 @@ import {
   getQuestionAnalysis,
   getWrongAnswerStats,
   getWrongAnswers,
-  getCategoryAnswerStats
+  getCategoryAnswerStats,
+  askDeepSeek
 } from '../controllers/answerController';
 import { authenticateToken, requireTeacher } from '../middleware/auth';
 import { submitAnswerValidation } from '../utils/validation';
@@ -38,5 +39,8 @@ router.get('/wrong-answers', getWrongAnswers);
 
 // 获取分类统计
 router.get('/category-stats', getCategoryAnswerStats);
+
+// DeepSeek AI 问答
+router.post('/ask-deepseek', askDeepSeek);
 
 export default router; 

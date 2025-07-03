@@ -1,10 +1,12 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
-const api = axios.create({
+const config = {
   baseURL: '/api',
   timeout: 10000,
-})
+}
+
+const api = axios.create(config)
 
 // Request interceptor
 api.interceptors.request.use(
